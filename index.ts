@@ -1,45 +1,48 @@
 #!/usr/bin/env bun
 
 /**
- * 
-    npx lmist@latest ls
-    npx lmist@latest get <file-name> -o => optional
-    npx lmist@latest stow <file-name>
+ *
+ *  npx lmist@latest (l)s
+ *  npx lmist@latest (a)dd <filename> -o | .
+ *  npx lmist@latest (s)tow <filename> -o | .
+ *
  */
+
+import fs from "fs";
+import path from "path";
+
+import type { BunFile } from "bun";
 
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";
-import fs from "fs";
-import path from "path";
+
 import chalk from "chalk";
 import ora from "ora";
 import logSymbols from "log-symbols";
 
-/**
- * Handles the business logic of checking for the file's existence.
- * @param {string} filePath - The path to check for the file.
- * @returns {boolean} - True if the file exists, otherwise false.
- */
-function checkFileExists(filePath) {
-  // Placeholder for checking if the file exists
-  return false;
+async function getFile(filename: string): Promise<BunFile | Error> {
+  const file = Bun.file(filename);
+  const exists = await file.exists();
+
+  if (!exists) {
+    return new Error("File not found");
+  }
+  return file;
+}
+
+async function copyFile(
+  sourceFile: BunFile,
+  destinationPath: string
+): Promise<number> {
+  return await Bun.write(destinationPath, sourceFile);
 }
 
 /**
- * Handles downloading and writing the specified file.
- * @param {string} fileName - The name of the file to download.
- * @param {string} destination - The destination directory where the file will be saved.
- */
-function downloadAndWriteFile(fileName, destination) {
-  // Placeholder for downloading and writing the file
-}
-
-/**
- * CLI definition and execution
+ * cli defexec
  */
 yargs(hideBin(process.argv))
   .command(
-    "add <filename>",
+    "a <filename>",
     "Downloads a specified file and saves it in the current directory or a specified output location.",
     (yargs) =>
       yargs
@@ -69,19 +72,27 @@ yargs(hideBin(process.argv))
           process.exit(1);
         }
 
-        // Check if the file already exists
-        if (checkFileExists(destination)) {
+        const src = await getFile(filename);
+        if (src instanceof Error) {
+          /* panic here */
+          console.log("bad");
+          process.exit(1);
+        }
+
+        if (await Bun.file(output).exists()) {
           spinner.info(
             chalk.yellow(
               `The file "${filename}" already exists at the specified location.`
             )
           );
-          process.exit(0);
+          process.exit(-1);
         }
 
         // Download and write the file
         spinner.text = `Downloading and saving "${filename}" to "${destination}"...`;
-        downloadAndWriteFile(filename, destination);
+
+        await copyFile(src, output);
+
         spinner.succeed(
           chalk.green(
             `✅ File "${filename}" has been successfully saved to "${output}".`
@@ -97,7 +108,7 @@ yargs(hideBin(process.argv))
       }
     }
   )
-  .alias("a", "add")
+  .alias("a <filename>", "add")
   .demandCommand(1, chalk.blue("You need to specify a command."))
   .strict()
   .help()
