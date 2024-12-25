@@ -10,6 +10,7 @@
 
 import fs from "fs";
 import path from "path";
+import { Glob } from "bun";
 
 import type { BunFile } from "bun";
 
@@ -35,6 +36,13 @@ async function copyFile(
   destinationPath: string
 ): Promise<number> {
   return await Bun.write(destinationPath, sourceFile);
+}
+
+async function ls(targ: string) {
+  const glob = new Glob("*");
+  for (const file of glob.scanSync(targ)) {
+    console.log(file);
+  }
 }
 
 /**
@@ -67,35 +75,36 @@ yargs(hideBin(process.argv))
         // Validate output directory
         if (!fs.existsSync(output)) {
           spinner.fail(
-            chalk.red(`Error: The output directory "${output}" does not exist.`)
+            chalk.red(
+              `Error: The output directory \"${output}\" does not exist.`
+            )
           );
           process.exit(1);
         }
 
         const src = await getFile(filename);
         if (src instanceof Error) {
-          /* panic here */
-          console.log("bad");
+          spinner.fail(chalk.red("File not found"));
           process.exit(1);
         }
 
         if (await Bun.file(output).exists()) {
           spinner.info(
             chalk.yellow(
-              `The file "${filename}" already exists at the specified location.`
+              `The file \"${filename}\" already exists at the specified location.`
             )
           );
           process.exit(-1);
         }
 
         // Download and write the file
-        spinner.text = `Downloading and saving "${filename}" to "${destination}"...`;
+        spinner.text = `Downloading and saving \"${filename}\" to \"${destination}\"...`;
 
         await copyFile(src, output);
 
         spinner.succeed(
           chalk.green(
-            `✅ File "${filename}" has been successfully saved to "${output}".`
+            `✅ File \"${filename}\" has been successfully saved to \"${output}\".`
           )
         );
       } catch (error) {
@@ -103,12 +112,37 @@ yargs(hideBin(process.argv))
         console.error(logSymbols.error, error.message);
         process.exit(1);
       } finally {
-        /* shutdown gracefully lol gpt 4got 2 add this, i still matter! */
         process.exit(0);
       }
     }
   )
   .alias("a <filename>", "add")
+  .command(
+    "l [target]",
+    "Lists all files in the target directory.",
+    (yargs) =>
+      yargs.positional("target", {
+        description: "The target directory to list files from.",
+        type: "string",
+        default: "fs",
+      }),
+    async (argv) => {
+      const { target } = argv;
+      try {
+        console.log(chalk.blue(`Listing files in directory: ${target}`));
+        await ls(target);
+      } catch (error) {
+        console.error(
+          logSymbols.error,
+          chalk.red(
+            `Failed to list files in directory \"${target}\": ${error.message}`
+          )
+        );
+        process.exit(1);
+      }
+    }
+  )
+  .alias("l", "ls")
   .demandCommand(1, chalk.blue("You need to specify a command."))
   .strict()
   .help()
