@@ -1,0 +1,25 @@
+{
+  "name": "@lmist/cli",
+  "bin": {
+    "lmist": "index.ts"
+  },
+  "scripts": {
+    "link": "bun link && bun link lmist",
+    "l": "bun link && bun link lmist"
+  },
+  "module": "index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/yargs": "^17.0.33"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "chalk": "^5.4.1",
+    "log-symbols": "^7.0.0",
+    "ora": "^8.1.1",
+    "yargs": "^17.7.2"
+  }
+}
